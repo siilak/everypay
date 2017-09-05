@@ -1,0 +1,132 @@
+<?php
+
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'Everypay.php');
+
+class PaymentEverypay extends PaymentModule {
+
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'PaymentEverypay',
+			'version' => 001,
+			'summary' => 'PaymentEverypay',
+			'singular' => false,
+			'requires' => 'PaymentModule',
+			);
+	}
+
+	public function init() {
+		$this->currenct = $this->defaultCurrency;
+	}
+
+  public function getTitle() {
+    return $this->_("Credit Card (Everypay.com)");
+  }
+
+	public function processPayment() {
+		// Set your secret key: remember to change this to your live secret key in production
+		// See your keys here https://dashboard.stripe.com/account
+		Everypay::setApiKey($this->secretKey);
+
+		// Get the credit card details submitted by the form
+		$token = $this->input->post->stripeToken;
+		$this->processUrl = 'https://igw-demo.every-pay.com/transactions/';
+
+		// Create the charge on Everypay's servers - this will charge the user's card
+		try {
+		$charge = Everypay_Charge::create(array(
+		  "amount" => $this->getTotalAmount(), // amount in cents, again
+		  "currency" => $this->currency,
+		  "card" => $token,
+		  "description" => $this->customer->email)
+		);
+		} catch(Everypay_CardError $e) {
+			$this->setFailureReason($e->getMessage());
+		  return false;
+		}
+		return true;
+	}
+
+	public function render() {
+
+		if ($this->getTotalAmount() <= 0) throw new WireException("Products are not set");
+		if ($this->processUrl == '') throw new WireException("processUrl is not set");
+
+
+		$out = '
+		<form action="'. $this->processUrl .'" method="post">
+		<input name="hmac" value="75ed21e06d7e3ed26d1eb8b3fab24bdf3d73df20">
+		<input name="hmac_fields" value="account_id,amount,api_username,billing_address,billing_city,billing_country,billin g_postcode,callback_url,customer_url,delivery_address,delivery_city,delivery_country,deli very_postcode,email,hmac_fields,nonce,order_reference,timestamp,transaction_type,user_ip" >
+	    <input name="transaction_type" value="charge"> 
+	    <input name="locale" value="en">
+		<input name="amount" value="'. $this->getTotalAmount() . '">
+		<input name="api_username" value="'. $this->publicKey .'"> 
+		<input name="account_id" value="'. $this->currency .'">
+		<input name="billing_address" value="Tamme 2">
+		<input name="billing_city" value="Tallinn">
+		<input name="billing_country" value="EE">
+		<input name="billing_postcode" value="12345">
+		<input name="callback_url" value="http://www.google.ee/?q=callback"> 
+		<input name="customer_url" value="http://www.google.ee/?q=redirect"> 
+		<input name="delivery_address" value="Kuuse 3">
+		<input name="delivery_city" value="Tallinn">
+		<input name="delivery_country" value="EE">
+		<input name="delivery_postcode" value="12345">
+		<input name="email" value="'. $this->customer->email .'">
+		<input name="nonce" value="d6e33441e0171249e71992946896f754">
+		<input name="order_reference" value="98c9fa2e52f0679610935497ff4da714"> 
+		<input name="timestamp" value="1397038382">
+		<input name="user_ip" value="82.131.119.82">
+		<input class="uk-button uk-button-primary" type="submit" value="'.$this->_('Proceed to Payment').'">
+	    
+	    data-name="'. $this->seller .'"
+	    data-currency=""
+	    data-panel-label="'. $this->_("Pay") .' {{amount}}"
+	    data-label="'. $this->_("Pay with Card") .'"
+	    ';
+
+	  $out .= '>
+	  </form>';
+		return $out;
+	}
+
+	public static function getModuleConfigInputfields(array $data) {
+		$inputfields = new InputfieldWrapper();
+
+    $field = wire('modules')->get('InputfieldText');
+    $field->name = 'seller';
+    $field->label = __("Seller name");
+    $field->notes = __("Company or seller of the goods - this is shown on stripe payment form");
+    if(isset($data['seller'])) $field->value = $data['seller'];
+    $inputfields->add($field);
+
+    $field = wire('modules')->get('InputfieldText');
+    $field->name = 'defaultCurrency';
+    $field->label = __("Default currency");
+    $field->notes = __("Use this currency by default (always possible to overwrite when using this module from API)");
+    if(isset($data['defaultCurrency'])) $field->value = $data['defaultCurrency'];
+    $inputfields->add($field);
+
+	$field = wire('modules')->get('InputfieldText');
+	$field->name = 'publicKey';
+	$field->label = __("API username");
+	$field->notes = __("Your public key: remember to change this to your live public key in production. See your keys [here](https://dashboard.stripe.com/account)");
+	if(isset($data['publicKey'])) $field->value = $data['publicKey'];
+	$inputfields->add($field);
+
+    $field = wire('modules')->get('InputfieldText');
+    $field->name = 'secretKey';
+    $field->label = __("API secret");
+    $field->notes = __("Your secret key: remember to change this to your live secret key in production. See your keys [here](https://dashboard.stripe.com/account)");
+    if(isset($data['secretKey'])) $field->value = $data['secretKey'];
+    $inputfields->add($field);
+
+    $field = wire('modules')->get('InputfieldText');
+    $field->name = 'skinName';
+    $field->label = __("Skin name");
+    $field->notes = __("Add every-pay.com iframe skin name");
+    if(isset($data['skinName'])) $field->value = $data['skinName'];
+    $inputfields->add($field);
+
+		return $inputfields;
+	}
+}
