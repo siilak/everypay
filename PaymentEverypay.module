@@ -54,8 +54,12 @@ class PaymentEverypay extends PaymentModule {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
 
+		if($_SERVER['HTTP_HOST'] == 'led.siilak.com') {
+			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
+		}
+
 		$out = '
-		<iframe id="iframe-payment-container" name="iframe-payment-container" width="400" height="400"></iframe>
+		<iframe id="iframe-payment-container" name="iframe-payment-container" class="payment-iframe" width="400" height="400"></iframe>
 		<form action="'. $this->processUrl .'" id="iframe_form" method="post" style="" target="iframe-payment-container">
 			<input name="hmac" value="75ed21e06d7e3ed26d1eb8b3fab24bdf3d73df20">
 			<input name="hmac_fields" value="">
@@ -70,8 +74,8 @@ class PaymentEverypay extends PaymentModule {
 			<input name="nonce" value="30d7810d31dbb77d4300fd3f6a59ff11">
 			<input name="order_reference" value="98c9fa2e52f0679610935497ff4da714"> 
 			<input name="timestamp" value="1437488204">
-			<input name="user_ip" value="82.131.119.82">
-			<input name="skin_name" value="default">
+			<input name="user_ip" value="000000000">
+			<input name="skin_name" value="'. $this->skinName .'">
 		</form>
 		<script> window.onload = function() { document.getElementById("iframe_form").submit(); } </script>
 	    ';
