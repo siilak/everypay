@@ -57,7 +57,7 @@ class PaymentEverypay extends PaymentModule {
 		if($_SERVER['HTTP_HOST'] == 'led.siilak.com') {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
-
+		// TODO: hmac generate with php
 		$out = '
 		<iframe id="iframe-payment-container" name="iframe-payment-container" class="payment-iframe" width="400" height="400"></iframe>
 		<form action="'. $this->processUrl .'" id="iframe_form" method="post" style="" target="iframe-payment-container">
