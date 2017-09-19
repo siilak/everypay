@@ -19,7 +19,7 @@ class PaymentEverypay extends PaymentModule {
 	}
 
   public function getTitle() {
-    return $this->_("Credit Card (Everypay.com)");
+    return $this->_("Credit Card (Every-pay.com)");
   }
 
 	public function processPayment() {
