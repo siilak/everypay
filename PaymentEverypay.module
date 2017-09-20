@@ -57,13 +57,25 @@ class PaymentEverypay extends PaymentModule {
 		if($_SERVER['HTTP_HOST'] == 'led.siilak.com') {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
-		// TODO: hmac generate with php
+
+		//Define key to hash, password + salt
+		$key = base64_encode(hash_hmac('sha1', utf8_encode($password . ':' . $salt), utf8_encode($salt)));
+		//Define Message
+		$message = $username . ':' . $ip . ':' . $agent . ':' . $timestamp;
+		//Create Hash
+		$hash = hash_hmac('sha1', $message, $key);
+		//Create token
+		$token = base64_encode($hash);
+		$tokenId = $username . ':' . $timestamp;
+		$tokenString = $token . ':' . $tokenId;
+		$tokenRetVal = base64_encode($tokenString);
+
 		$out = '
 		<iframe id="iframe-payment-container" name="iframe-payment-container" class="payment-iframe" width="400" height="400"></iframe>
 		<form action="'. $this->processUrl .'" id="iframe_form" method="post" style="" target="iframe-payment-container">
-			<input name="hmac" value="75ed21e06d7e3ed26d1eb8b3fab24bdf3d73df20">
+			<input name="hmac" value="'.$tokenRetVal.'">
 			<input name="hmac_fields" value="">
-			<input name="transaction_type" value="charge"> 
+			<input name="transaction_type" value="charge">
 			<input name="locale" value="en">
 			<input name="amount" value="'. preg_replace("/\.?0*$/",'',$this->getTotalAmount()).'">
 			<input name="api_username" value="'. $this->publicKey .'"> 
@@ -73,8 +85,7 @@ class PaymentEverypay extends PaymentModule {
 			<input name="customer_url" value="http://www.google.ee/?q=redirect"> 
 			<input name="nonce" value="30d7810d31dbb77d4300fd3f6a59ff11">
 			<input name="order_reference" value="98c9fa2e52f0679610935497ff4da714"> 
-			<input name="timestamp" value="1437488204">
-			<input name="user_ip" value="000000000">
+			<input name="timestamp" value="'.date("Ymd").'">
 			<input name="skin_name" value="'. $this->skinName .'">
 		</form>
 		<script> window.onload = function() { document.getElementById("iframe_form").submit(); } </script>
