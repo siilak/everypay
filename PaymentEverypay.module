@@ -58,24 +58,12 @@ class PaymentEverypay extends PaymentModule {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
 
-		//Define key to hash, password + salt
-		$key = base64_encode(hash_hmac('sha1', utf8_encode($password . ':' . $salt), utf8_encode($salt)));
-		//Define Message
-		$message = $username . ':' . $ip . ':' . $agent . ':' . $timestamp;
-		//Create Hash
-		$hash = hash_hmac('sha1', $message, $key);
-		//Create token
-		$token = base64_encode($hash);
-		$tokenId = $username . ':' . $timestamp;
-		$tokenString = $token . ':' . $tokenId;
-		$tokenRetVal = base64_encode($tokenString);
-
 		$out = '
 		<iframe id="iframe-payment-container" name="iframe-payment-container" class="payment-iframe" width="400" height="400"></iframe>
 		<form action="'. $this->processUrl .'" id="iframe_form" method="post" style="" target="iframe-payment-container">
-			<input name="hmac" value="'.$tokenRetVal.'">
+			<input name="hmac" value="'.$token.'">
 			<input name="hmac_fields" value="">
-			<input name="transaction_type" value="charge">
+			<input name="transaction_type" value="charge"> 
 			<input name="locale" value="en">
 			<input name="amount" value="'. preg_replace("/\.?0*$/",'',$this->getTotalAmount()).'">
 			<input name="api_username" value="'. $this->publicKey .'"> 
