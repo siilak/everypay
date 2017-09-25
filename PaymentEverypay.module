@@ -54,11 +54,35 @@ class PaymentEverypay extends PaymentModule {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
 
+		$callback_url = "http://";
+		$customer_url = "http://";
 		$amount = preg_replace( "/\.?0*$/", '', $this->getTotalAmount());
-		$hmac_values = $amount;
-		$hmac = hash_hmac( 'sha1', $hmac_values, $this->secretKey );
-		$nonce = bin2hex(openssl_random_pseudo_bytes(6));
-		$order_reference = bin2hex(openssl_random_pseudo_bytes(12));
+		$nonce = uniqid( '', true );
+		$order_reference = bin2hex(openssl_random_pseudo_bytes(16));
+
+		$args = array(
+			'account_id'        => $this->account_id,
+			'amount'            => $amount,
+			'api_username'      => $this->api_username,
+			'callback_url'      => $callback_url,
+			'customer_url'      => $customer_url,
+			'email'             => $this->customer->email,
+			'nonce'             => $nonce,
+			'order_reference'   => $order_reference,
+			'request_cc_token'  => '0',
+			'timestamp'         => time(),
+			'transaction_type'  => $this->transaction_type,
+			'user_ip'           => $_SERVER['REMOTE_ADDR'],
+		);
+
+		// prepare and sign fields string
+		$args['hmac_fields'] = '';
+
+		ksort( $args );
+
+		$hmac_fields = implode( ',', array_keys( $args ) );
+
+		$hmac = $this->sign_everypay_request( $this->prepare_everypay_string( $args ) );
 
 		$out = '
 		<iframe id="iframe-payment-container" name="iframe-payment-container" class="payment-iframe" width="400" height="400"></iframe>
@@ -71,19 +95,37 @@ class PaymentEverypay extends PaymentModule {
 			<label>api_username</label><input class="uk-input" name="api_username" value="' . $this->publicKey . '"></br> 
 			<label>account_id</label><input class="uk-input" name="account_id" value="' . $this->currency . '"></br>
 			<label>email</label><input class="uk-input" name="email" value="' . $this->customer->email . '"></br>
-			<label>callback_url</label><input class="uk-input" name="callback_url" value="http://www.google.ee/?q=callback"></br>
-			<label>customer_url</label><input class="uk-input" name="customer_url" value="http://www.google.ee/?q=redirect"></br>
+			<label>callback_url</label><input class="uk-input" name="callback_url" value="'.$callback_url.'"></br>
+			<label>customer_url</label><input class="uk-input" name="customer_url" value="'.$customer_url.'"></br>
 			<label>nonce</label><input class="uk-input" name="nonce" value="'.$nonce.'"></br>
 			<label>order_reference</label><input class="uk-input" name="order_reference" value="'.$order_reference.'"></br>
 			<label>timestamp</label><input class="uk-input" name="timestamp" value="' . date( "Ymd" ) . '"></br>
 			<label>skin_name</label><input class="uk-input" name="skin_name" value="' . $this->skinName . '"></br>
-			<label>hmac_fields</label><input class="uk-input" name="hmac_fields" value="account_id,amount,api_username,callback_url,customer_url,locale,nonce,order_reference,skin_name,timestamp,transaction_type">
+			<label>hmac_fields</label><input class="uk-input" name="hmac_fields" value="'.$hmac_fields.'">
 		</form>
 		<script> window.onload = function() { document.getElementById("iframe_form").submit(); } </script>
 	    ';
 
 		return $out;
 	}
+
+	// Hmac
+	private function prepare_everypay_string( array $args ) {
+		$arr = array( );
+		ksort( $args );
+		foreach ( $args as $k => $v ) {
+			$arr[] = $k . '=' . $v;
+		}
+
+		$str = implode( '&', $arr );
+
+		return $str;
+	}
+	private function sign_everypay_request( $request ) {
+		return hash_hmac( 'sha1', $request, $this->api_secret );
+	}
+
+	// Forms
 	public static function getModuleConfigInputfields( array $data ) {
 		$inputfields = new InputfieldWrapper();
 		$field = wire( 'modules' )->get( 'InputfieldText' );
