@@ -61,8 +61,8 @@ class PaymentEverypay extends PaymentModule {
 		$order_reference = bin2hex(openssl_random_pseudo_bytes(16));
 
 		$args = array(
-			'account_id'        => $this->account_id,
 			'amount'            => $amount,
+			'account_id'        => $this->currency,
 			'api_username'      => $this->api_username,
 			'callback_url'      => $callback_url,
 			'customer_url'      => $customer_url,
@@ -122,7 +122,7 @@ class PaymentEverypay extends PaymentModule {
 		return $str;
 	}
 	private function sign_everypay_request( $request ) {
-		return hash_hmac( 'sha1', $request, $this->api_secret );
+		return hash_hmac( 'sha1', $request, $this->secretKey );
 	}
 
 	// Forms
