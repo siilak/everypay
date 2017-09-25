@@ -1,124 +1,131 @@
 <?php
-
-require_once(__DIR__ . DIRECTORY_SEPARATOR . 'Everypay.php');
-
+require_once( __DIR__ . DIRECTORY_SEPARATOR . 'Everypay.php' );
 class PaymentEverypay extends PaymentModule {
-
 	public static function getModuleInfo() {
-		return array(
-			'title' => 'PaymentEverypay',
-			'version' => 001,
-			'summary' => 'PaymentEverypay',
-			'singular' => false,
-			'requires' => 'PaymentModule',
-			);
+		return [
+			'title'    => 'PaymentEverypay',
+			'version'  => 001,
+			'summary'  => 'PaymentEverypay',
+			'singular' => FALSE,
+			'requires' => 'PaymentModule', ];
 	}
-
 	public function init() {
 		$this->currenct = $this->defaultCurrency;
 	}
-
-  public function getTitle() {
-    return $this->_("Credit Card (Every-pay.com)");
-  }
-
+	public function getTitle() {
+		return $this->_( "Credit Card (Every-pay.com)" );
+	}
 	public function processPayment() {
 		// Set your secret key: remember to change this to your live secret key in production
-		Everypay::setApiKey($this->secretKey);
-
+		Everypay::setApiKey( $this->secretKey );
 		// Get the credit card details submitted by the form
 		$token = $this->input->post->everypayToken;
-
 		// Create the charge on Everypay's servers - this will charge the user's card
 		try {
-		$charge = Everypay_Charge::create(array(
-		  "amount" => $this->getTotalAmount(), // amount in cents, again
-		  "currency" => $this->currency,
-		  "card" => $token,
-		  "description" => $this->customer->email)
-		);
-		} catch(Everypay_CardError $e) {
-			$this->setFailureReason($e->getMessage());
-		  return false;
+			$charge = Everypay_Charge::create( [
+				"amount"      => $this->getTotalAmount(),
+				// amount in cents, again
+				"currency"    => $this->currency,
+				"card"        => $token,
+				"description" => $this->customer->email
+				]
+			);
+		} catch ( Everypay_CardError $e ) {
+			$this->setFailureReason( $e->getMessage() );
+
+			return FALSE;
 		}
-		return true;
+
+		return TRUE;
 	}
-
 	public function render() {
-
-		if ($this->getTotalAmount() <= 0) throw new WireException("Products are not set");
-		if ($this->processUrl == '') throw new WireException("processUrl is not set");
-
+		if ( $this->getTotalAmount() <= 0 ) {
+			throw new WireException( "Products are not set" );
+		}
+		if ( $this->processUrl == '' ) {
+			throw new WireException( "processUrl is not set" );
+		}
 		// Testing API
-		if($_SERVER['HTTP_HOST'] == 'led.dev') {
+		if ( $_SERVER['HTTP_HOST'] == 'led.dev' ) {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
 		// Live API
-		if($_SERVER['HTTP_HOST'] == 'led.siilak.com') {
+		if ( $_SERVER['HTTP_HOST'] == 'led.siilak.com' ) {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
 
+		$amount = preg_replace( "/\.?0*$/", '', $this->getTotalAmount());
+		$hmac_values = $amount;
+		$hmac = hash_hmac( 'sha1', $hmac_values, $this->secretKey );
+		$nonce = bin2hex(openssl_random_pseudo_bytes(6));
+		$order_reference = bin2hex(openssl_random_pseudo_bytes(12));
+
 		$out = '
 		<iframe id="iframe-payment-container" name="iframe-payment-container" class="payment-iframe" width="400" height="400"></iframe>
-		<form action="'. $this->processUrl .'" id="iframe_form" method="post" style="" target="iframe-payment-container">
-			<input name="hmac" value="'.$token.'">
-			<input name="hmac_fields" value="">
-			<input name="transaction_type" value="charge"> 
-			<input name="locale" value="en">
-			<input name="amount" value="'. preg_replace("/\.?0*$/",'',$this->getTotalAmount()).'">
-			<input name="api_username" value="'. $this->publicKey .'"> 
-			<input name="account_id" value="'. $this->currency .'">
-			<input name="email" value="'. $this->customer->email .'">
-			<input name="callback_url" value="http://www.google.ee/?q=callback"> 
-			<input name="customer_url" value="http://www.google.ee/?q=redirect"> 
-			<input name="nonce" value="30d7810d31dbb77d4300fd3f6a59ff11">
-			<input name="order_reference" value="98c9fa2e52f0679610935497ff4da714"> 
-			<input name="timestamp" value="'.date("Ymd").'">
-			<input name="skin_name" value="'. $this->skinName .'">
+		<form action="' . $this->processUrl . '" id="iframe_form" method="post" style="" target="iframe-payment-container">
+			<div>Only for a dev (hidden in live)</div>
+			<label>hmac</label><input class="uk-input" name="hmac" value="' . $hmac . '"></br>
+			<label>transaction_type</label><input class="uk-input" name="transaction_type" value="charge"></br>
+			<label>locale</label><input class="uk-input" name="locale" value="en"></br>
+			<label>amount</label><input class="uk-input" name="amount" value="'. $amount .'"></br>
+			<label>api_username</label><input class="uk-input" name="api_username" value="' . $this->publicKey . '"></br> 
+			<label>account_id</label><input class="uk-input" name="account_id" value="' . $this->currency . '"></br>
+			<label>email</label><input class="uk-input" name="email" value="' . $this->customer->email . '"></br>
+			<label>callback_url</label><input class="uk-input" name="callback_url" value="http://www.google.ee/?q=callback"></br>
+			<label>customer_url</label><input class="uk-input" name="customer_url" value="http://www.google.ee/?q=redirect"></br>
+			<label>nonce</label><input class="uk-input" name="nonce" value="'.$nonce.'"></br>
+			<label>order_reference</label><input class="uk-input" name="order_reference" value="'.$order_reference.'"></br>
+			<label>timestamp</label><input class="uk-input" name="timestamp" value="' . date( "Ymd" ) . '"></br>
+			<label>skin_name</label><input class="uk-input" name="skin_name" value="' . $this->skinName . '"></br>
+			<label>hmac_fields</label><input class="uk-input" name="hmac_fields" value="account_id,amount,api_username,callback_url,customer_url,locale,nonce,order_reference,skin_name,timestamp,transaction_type">
 		</form>
 		<script> window.onload = function() { document.getElementById("iframe_form").submit(); } </script>
 	    ';
 
 		return $out;
 	}
-
-	public static function getModuleConfigInputfields(array $data) {
+	public static function getModuleConfigInputfields( array $data ) {
 		$inputfields = new InputfieldWrapper();
-
-    $field = wire('modules')->get('InputfieldText');
-    $field->name = 'seller';
-    $field->label = __("Seller name");
-    $field->notes = __("Company or seller of the goods - this is shown on everypay payment form");
-    if(isset($data['seller'])) $field->value = $data['seller'];
-    $inputfields->add($field);
-
-    $field = wire('modules')->get('InputfieldText');
-    $field->name = 'defaultCurrency';
-    $field->label = __("Default currency");
-    $field->notes = __("Use this currency by default (always possible to overwrite when using this module from API)");
-    if(isset($data['defaultCurrency'])) $field->value = $data['defaultCurrency'];
-    $inputfields->add($field);
-
-	$field = wire('modules')->get('InputfieldText');
-	$field->name = 'publicKey';
-	$field->label = __("API username");
-	$field->notes = __("Your public key: remember to change this to your live public key in production.");
-	if(isset($data['publicKey'])) $field->value = $data['publicKey'];
-	$inputfields->add($field);
-
-    $field = wire('modules')->get('InputfieldText');
-    $field->name = 'secretKey';
-    $field->label = __("API secret");
-    $field->notes = __("Your secret key: remember to change this to your live secret key in production.");
-    if(isset($data['secretKey'])) $field->value = $data['secretKey'];
-    $inputfields->add($field);
-
-    $field = wire('modules')->get('InputfieldText');
-    $field->name = 'skinName';
-    $field->label = __("Skin name");
-    $field->notes = __("Add every-pay.com iframe skin name");
-    if(isset($data['skinName'])) $field->value = $data['skinName'];
-    $inputfields->add($field);
+		$field = wire( 'modules' )->get( 'InputfieldText' );
+		$field->name = 'seller';
+		$field->label = __( "Seller name" );
+		$field->notes = __( "Company or seller of the goods - this is shown on everypay payment form" );
+		if ( isset( $data['seller'] ) ) {
+			$field->value = $data['seller'];
+		}
+		$inputfields->add( $field );
+		$field = wire( 'modules' )->get( 'InputfieldText' );
+		$field->name = 'defaultCurrency';
+		$field->label = __( "Default currency" );
+		$field->notes = __( "Use this currency by default (always possible to overwrite when using this module from API)" );
+		if ( isset( $data['defaultCurrency'] ) ) {
+			$field->value = $data['defaultCurrency'];
+		}
+		$inputfields->add( $field );
+		$field = wire( 'modules' )->get( 'InputfieldText' );
+		$field->name = 'publicKey';
+		$field->label = __( "API username" );
+		$field->notes = __( "Your public key: remember to change this to your live public key in production." );
+		if ( isset( $data['publicKey'] ) ) {
+			$field->value = $data['publicKey'];
+		}
+		$inputfields->add( $field );
+		$field = wire( 'modules' )->get( 'InputfieldText' );
+		$field->name = 'secretKey';
+		$field->label = __( "API secret" );
+		$field->notes = __( "Your secret key: remember to change this to your live secret key in production." );
+		if ( isset( $data['secretKey'] ) ) {
+			$field->value = $data['secretKey'];
+		}
+		$inputfields->add( $field );
+		$field = wire( 'modules' )->get( 'InputfieldText' );
+		$field->name = 'skinName';
+		$field->label = __( "Skin name" );
+		$field->notes = __( "Add every-pay.com iframe skin name" );
+		if ( isset( $data['skinName'] ) ) {
+			$field->value = $data['skinName'];
+		}
+		$inputfields->add( $field );
 
 		return $inputfields;
 	}
