@@ -89,6 +89,7 @@ class PaymentEverypay extends PaymentModule {
 		<form action="' . $this->processUrl . '" id="iframe_form" method="post" style="" target="iframe-payment-container">
 			<div>Only for a dev (hidden in live)</div>
 			<label>hmac</label><input class="uk-input" name="hmac" value="' . $hmac . '"></br>
+			<label>hmac_fields</label><input class="uk-input" name="hmac_fields" value="'.$hmac_fields.'">
 			<label>transaction_type</label><input class="uk-input" name="transaction_type" value="charge"></br>
 			<label>locale</label><input class="uk-input" name="locale" value="en"></br>
 			<label>amount</label><input class="uk-input" name="amount" value="'. $amount .'"></br>
@@ -101,7 +102,6 @@ class PaymentEverypay extends PaymentModule {
 			<label>order_reference</label><input class="uk-input" name="order_reference" value="'.$order_reference.'"></br>
 			<label>timestamp</label><input class="uk-input" name="timestamp" value="' . date( "Ymd" ) . '"></br>
 			<label>skin_name</label><input class="uk-input" name="skin_name" value="' . $this->skinName . '"></br>
-			<label>hmac_fields</label><input class="uk-input" name="hmac_fields" value="'.$hmac_fields.'">
 		</form>
 		<script> window.onload = function() { document.getElementById("iframe_form").submit(); } </script>
 	    ';
