@@ -1,3 +1,3 @@
-# Processwire every-pay.com payment module
+# ProcessWire every-pay.com payment module
 ## PaymentEverypay module
 - TODO: HMAC calculation
