@@ -7,6 +7,7 @@ class PaymentEverypay extends PaymentModule {
 			'version'  => 001,
 			'summary'  => 'PaymentEverypay',
 			'singular' => FALSE,
+			'author' => "Marko Siilak | http://siilak.com",
 			'requires' => 'PaymentModule', ];
 	}
 	public function init() {
@@ -54,11 +55,13 @@ class PaymentEverypay extends PaymentModule {
 			$this->processUrl = 'https://igw-demo.every-pay.com/transactions';
 		}
 
-		$callback_url = "http://";
-		$customer_url = "http://";
+		$callback_url = "http://led.dev/?=callback";
+		$customer_url = "http://led.dev/?=customer";
 		$amount = preg_replace( "/\.?0*$/", '', $this->getTotalAmount());
 		$nonce = uniqid( '', true );
 		$order_reference = bin2hex(openssl_random_pseudo_bytes(16));
+
+		$hmac_fields = implode( ',', array_keys( $args ) );
 
 		$args = array(
 			'amount'            => $amount,
@@ -73,15 +76,10 @@ class PaymentEverypay extends PaymentModule {
 			'timestamp'         => time(),
 			'transaction_type'  => $this->transaction_type,
 			'user_ip'           => $_SERVER['REMOTE_ADDR'],
+			'hmac_fields'       => $hmac_fields,
 		);
 
-		// prepare and sign fields string
-		$args['hmac_fields'] = '';
-
 		ksort( $args );
-
-		$hmac_fields = implode( ',', array_keys( $args ) );
-
 		$hmac = $this->sign_everypay_request( $this->prepare_everypay_string( $args ) );
 
 		$out = '
@@ -89,7 +87,6 @@ class PaymentEverypay extends PaymentModule {
 		<form action="' . $this->processUrl . '" id="iframe_form" method="post" style="" target="iframe-payment-container">
 			<div>Only for a dev (hidden in live)</div>
 			<label>hmac</label><input class="uk-input" name="hmac" value="' . $hmac . '"></br>
-			<label>hmac_fields</label><input class="uk-input" name="hmac_fields" value="'.$hmac_fields.'">
 			<label>transaction_type</label><input class="uk-input" name="transaction_type" value="charge"></br>
 			<label>locale</label><input class="uk-input" name="locale" value="en"></br>
 			<label>amount</label><input class="uk-input" name="amount" value="'. $amount .'"></br>
@@ -109,7 +106,7 @@ class PaymentEverypay extends PaymentModule {
 		return $out;
 	}
 
-	// Hmac
+	// Hmac calc and ordering
 	private function prepare_everypay_string( array $args ) {
 		$arr = array( );
 		ksort( $args );
@@ -125,7 +122,7 @@ class PaymentEverypay extends PaymentModule {
 		return hash_hmac( 'sha1', $request, $this->secretKey );
 	}
 
-	// Forms
+	// Module settings forms
 	public static function getModuleConfigInputfields( array $data ) {
 		$inputfields = new InputfieldWrapper();
 		$field = wire( 'modules' )->get( 'InputfieldText' );
